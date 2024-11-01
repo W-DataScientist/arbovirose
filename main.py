@@ -39,7 +39,7 @@ st.sidebar.markdown(
     "<a href='https://github.com/W-DataScientist/previsao_arbovirose' target='_blank'>"
     "<img src='https://banner2.cleanpng.com/20180920/aey/kisspng-scalable-vector-graphics-github-computer-icons-log-github-brand-octacat-social-svg-png-icon-free-down-5ba35d7db54fe5.6273953815374329577427.jpg' width='25' style='margin-right: 8px;'>"
     "</a>"
-    "<a href='https://github.com/W-DataScientist/previsao_arbovirose'>Previsão Arbovirose</a>"
+    "<a href='https://github.com/W-DataScientist/arbovirose'>Arbovirose</a>"
     "</div>",
     unsafe_allow_html=True
 )
