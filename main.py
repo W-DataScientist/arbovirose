@@ -44,7 +44,7 @@ with tab3:
 # Adicionando logo do GitHub e link na parte inferior do sidebar
 st.sidebar.markdown(
     "<div style='display: flex; align-items: center;'>"
-    "<a href='https://github.com/W-DataScientist/previsao_arbovirose' target='_blank'>"
+    "<a href='https://github.com/W-DataScientist/arbovirose' target='_blank'>"
     "<img src='https://banner2.cleanpng.com/20180920/aey/kisspng-scalable-vector-graphics-github-computer-icons-log-github-brand-octacat-social-svg-png-icon-free-down-5ba35d7db54fe5.6273953815374329577427.jpg' width='25' style='margin-right: 8px;'>"
     "</a>"
     "<a href='https://github.com/W-DataScientist/previsao_arbovirose'>Previsão Arbovirose</a>"
