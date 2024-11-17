@@ -2,3 +2,4 @@ plotly
 pandas
 requests
 pydeck
+scikit-learn
