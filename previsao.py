@@ -19,7 +19,7 @@ def fetch_epidemiological_data(geocode, disease):
 
 # Função principal para exibir o gráfico
 def display_previsao():
-    geocode = "3550308"  # Código do município (Fortaleza)
+    geocode = "3550308"  # Código do município
 
     # Coletando dados históricos (2014-2024) para Dengue
     data = fetch_epidemiological_data(geocode, "dengue")
