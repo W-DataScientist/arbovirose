@@ -1,4 +1,12 @@
 import streamlit as st
+import locale
+
+# Tenta definir a localidade para português do Brasil
+try:
+    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
+except locale.Error:
+    locale.setlocale(locale.LC_TIME, 'C')  # Usa uma localidade padrão se falhar
+
 from dados import display_map
 from doc import display_doc
 from previsao import display_previsao
@@ -39,7 +47,7 @@ st.sidebar.markdown(
     "<a href='https://github.com/W-DataScientist/previsao_arbovirose' target='_blank'>"
     "<img src='https://banner2.cleanpng.com/20180920/aey/kisspng-scalable-vector-graphics-github-computer-icons-log-github-brand-octacat-social-svg-png-icon-free-down-5ba35d7db54fe5.6273953815374329577427.jpg' width='25' style='margin-right: 8px;'>"
     "</a>"
-    "<a href='https://github.com/W-DataScientist/arbovirose'>Arbovirose</a>"
+    "<a href='https://github.com/W-DataScientist/previsao_arbovirose'>Previsão Arbovirose</a>"
     "</div>",
     unsafe_allow_html=True
 )
