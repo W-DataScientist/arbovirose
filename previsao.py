@@ -1,114 +1,145 @@
 import streamlit as st
-import plotly.express as px
 import pandas as pd
+import numpy as np
 import requests
-from datetime import datetime, timedelta
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split, cross_val_score
+import plotly.graph_objects as go
 
-# Função para obter dados da API com base no geocode e tipo de arbovirose.
-def fetch_data(geocode, arbovirose):
-    url = f"https://info.dengue.mat.br/api/alertcity?geocode={geocode}&disease={arbovirose}&format=json&ew_start=1&ew_end=52&ey_start=2024&ey_end=2024"
+# Função para buscar dados da API
+def fetch_epidemiological_data(geocode, disease):
+    url = f"https://info.dengue.mat.br/api/alertcity?geocode={geocode}&disease={disease}&format=json&ew_start=1&ew_end=52&ey_start=2014&ey_end=2024"
     response = requests.get(url)
-    data = response.json()
-    return data
-
-# Função para calcular o primeiro dia da semana epidemiológica.
-def get_first_day_of_epi_week(year, week):
-    first_day_of_year = datetime(year, 1, 1)
-    if first_day_of_year.weekday() <= 3:
-        first_week_start = first_day_of_year - timedelta(days=first_day_of_year.weekday())
+    if response.status_code == 200:
+        return response.json()
     else:
-        first_week_start = first_day_of_year + timedelta(days=(7 - first_day_of_year.weekday()))
-    
-    epi_week_start = first_week_start + timedelta(weeks=week - 1)
-    return epi_week_start
+        st.error("Erro ao buscar dados da API.")
+        return None
 
-# Função para processar os dados.
-def process_data(data):
-    if isinstance(data, list):
-        records = []
-        
-        for item in data:
-            data_inicio = datetime.fromtimestamp(item['data_iniSE'] / 1000)
-            records.append({
-                'mes': data_inicio.strftime('%B'),
-                'mes_abreviado': data_inicio.strftime('%b').capitalize(),
-                'mes_num': data_inicio.month,
-                'ano': data_inicio.year,
-                'semana_epidemiologica': item.get('SE', None),
-                'casos': item.get('casos', None),
-                'nivel': item.get('nivel', None),
-                'pop': item.get('pop', None),
-                'tempmin': item.get('tempmin', None),
-                'umidmax': item.get('umidmax', None),
-                'umidmed': item.get('umidmed', None),
-                'umidmin': item.get('umidmin', None),
-                'tempmed': item.get('tempmed', None),
-                'tempmax': item.get('tempmax', None),
-                'notif_accum_year': item.get('notif_accum_year', None)
-            })
-        return pd.DataFrame(records)
-    else:
-        st.error("Formato de dados inesperado: Esperado uma lista.")
-        return pd.DataFrame()
-
+# Função principal para exibir o gráfico
 def display_previsao():
-    geocode = "2302503"  
-    arbovirose = "dengue"  
+    geocode = "3550308"  # Código do município (Fortaleza)
 
-    data = fetch_data(geocode, arbovirose)
-    df = process_data(data)
+    # Coletando dados históricos (2014-2024) para Dengue
+    data = fetch_epidemiological_data(geocode, "dengue")
+    all_weeks_data = []
 
-    ano_atual = datetime.now().year  
-    df_atual = df[df['ano'] == ano_atual]
+    if data:
+        for week_data in data:
+            week_info = {
+                'Semana': int(str(week_data['SE'])[-2:]),  # Extraindo a semana do formato SE
+                'Casos': week_data['casos'],
+                'Temp Média': week_data['tempmed'],
+                'Umidade Média': week_data['umidmed'],
+                'Rt': week_data['Rt'],
+                'População': week_data['pop']  # Adicionando a população dos dados coletados
+            }
+            all_weeks_data.append(week_info)
 
-    df_semanal = df_atual.groupby(['semana_epidemiologica']).agg({'casos': 'sum'}).reset_index()
+    # Criar um DataFrame com os dados coletados
+    historical_df = pd.DataFrame(all_weeks_data)
 
-    df_semanal['umidmed'] = df_atual.groupby(['semana_epidemiologica'])['umidmed'].mean().values 
-    df_semanal['tempmed'] = df_atual.groupby(['semana_epidemiologica'])['tempmed'].mean().values 
+    # Agrupar por semana e calcular a média dos casos
+    historical_weekly_cases = historical_df.groupby('Semana').mean().reset_index()
 
-    df_semanal['mes_abreviado'] = df_semanal['semana_epidemiologica'].apply(lambda se: get_first_day_of_epi_week(ano_atual, se).strftime('%b').capitalize())
+    # Criar variáveis independentes e dependentes
+    X = historical_weekly_cases[['Semana', 'Temp Média', 'Umidade Média', 'Rt', 'População']]
+    y = historical_weekly_cases['Casos']
+
+    # Dividir os dados em conjuntos de treinamento e teste
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Sidebar para seleção de modelo e estratégia (sem filtro de ano)
+    st.sidebar.title("Configurações do Modelo")
     
-    df_semanal['label'] = df_semanal.apply(lambda x: f'{x["semana_epidemiologica"]:02d} - {x["mes_abreviado"]}', axis=1)
+    model_option = st.sidebar.selectbox(
+        "Escolha o modelo:",
+        ("Random Forest", "Regressão Linear")
+    )
+    
+    cross_val_option = st.sidebar.checkbox("Usar Validação Cruzada")
 
-    if not df_semanal.empty:
-        fig_dengue = px.bar(df_semanal,
-                            x='label',
-                            y='casos',
-                            title=f'Casos de Dengue em {ano_atual} (Por Semana Epidemiológica)',
-                            labels={'label': 'Semana Epidemiológica - Mês', 'casos': 'Número de Casos'},
-                            color='casos',
-                            color_continuous_scale=px.colors.sequential.YlOrRd,
-                            barmode='group')
+    # Treinar o modelo com base na seleção do usuário
+    if model_option == "Random Forest":
+        model = RandomForestRegressor(n_estimators=100, random_state=42)
+        model.fit(X_train, y_train)
+        
+        if cross_val_option:
+            scores = cross_val_score(model, X, y, cv=5)
+            st.write(f"Scores da validação cruzada: {scores}")
 
-        fig_dengue.update_layout(margin=dict(l=0, r=0, t=50, b=40), width=1500)
-        st.plotly_chart(fig_dengue)
+    elif model_option == "Regressão Linear":
+        model = LinearRegression()
+        model.fit(X_train, y_train)
+        
+        if cross_val_option:
+            scores = cross_val_score(model, X, y, cv=5)
+            st.write(f"Scores da validação cruzada: {scores}")
 
-        for arbovirose in ["chikungunya", "zika"]:
-            data = fetch_data(geocode, arbovirose) 
-            df = process_data(data) 
-            df_atual = df[df['ano'] == ano_atual] 
-            df_semanal = df_atual.groupby(['semana_epidemiologica']).agg({'casos': 'sum'}).reset_index() 
-            df_semanal['umidmed'] = df_atual.groupby(['semana_epidemiologica'])['umidmed'].mean().values 
-            df_semanal['tempmed'] = df_atual.groupby(['semana_epidemiologica'])['tempmed'].mean().values 
-            df_semanal['mes_abreviado'] = df_semanal['semana_epidemiologica'].apply(lambda se: get_first_day_of_epi_week(ano_atual, se).strftime('%b').capitalize()) 
-            df_semanal['label'] = df_semanal.apply(lambda x: f'{x["semana_epidemiologica"]:02d} - {x["mes_abreviado"]}', axis=1)
+    # Prever casos para 2025 (52 semanas)
+    future_weeks = np.arange(1, 53).reshape(-1, 1)  # Semanas de 1 a 52 para 2025
 
-            if not df_semanal.empty:
-                fig_other = px.bar(df_semanal,
-                                   x='label',
-                                   y='casos',
-                                   title=f'Casos de {arbovirose.capitalize()} em {ano_atual} (Por Semana Epidemiológica)',
-                                   labels={'label': 'Semana Epidemiológica - Mês','casos':'Número de Casos'},
-                                   color='casos',
-                                   color_continuous_scale=px.colors.sequential.YlOrRd,
-                                   barmode='group')
+    # Simular valores futuros para temperatura média, umidade e Rt
+    future_temp_med = np.random.uniform(low=20, high=30, size=52)  # Temperatura média simulada
+    future_umid_med = np.random.uniform(low=60, high=90, size=52)  # Umidade média simulada
+    future_rt = np.random.uniform(low=0.8, high=1.2, size=52)      # Rt simulado
 
-                fig_other.update_layout(margin=dict(l=0, r=0, t=50, b=40), width=1500)
+    future_data = pd.DataFrame({
+        'Semana': future_weeks.flatten(),
+        'Temp Média': future_temp_med,
+        'Umidade Média': future_umid_med,
+        'Rt': future_rt,
+        'População': [np.mean(historical_weekly_cases['População'])] * 52  # Usando média da população histórica nas previsões futuras
+    })
 
-                st.plotly_chart(fig_other)
+    predicted_cases = model.predict(future_data)
 
-    else:
-        st.write("Nenhum dado disponível para o ano selecionado.")
+    # Garantir que os casos previstos não sejam negativos
+    predicted_cases = np.maximum(predicted_cases, 0)
 
-if __name__ == "__main__":
-    display_previsao()
+    # Criar um DataFrame para armazenar as previsões
+    forecast_df = pd.DataFrame({
+        'Semana': future_weeks.flatten(),
+        'Casos Previsto': predicted_cases
+    })
+
+    # Definindo os nomes dos meses correspondentes às semanas (considerando que as semanas são de 1 a 52)
+    month_labels = [
+        "Jan", "Jan", "Jan", "Jan", "Fev", "Fev", "Fev", "Fev",
+        "Mar", "Mar", "Mar", "Mar", "Abr", "Abr", "Abr", "Abr",
+        "Mai", "Mai", "Mai", "Mai", "Jun", "Jun", "Jun", "Jun",
+        "Jul", "Jul", "Jul", "Jul", "Ago", "Ago", "Ago", "Ago",
+        "Set", "Set", "Set", "Set", "Out", "Out", "Out", "Out",
+        "Nov", "Nov", "Nov", "Nov", "Dez", "Dez", "Dez", "Dez"
+    ]
+
+    ticktext_labels = [f"{week}<br>{month}" for week, month in zip(range(1, 53), month_labels)]
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        x=forecast_df['Semana'],
+        y=forecast_df['Casos Previsto'],
+        name='Casos Previsto',
+        marker_color='red',
+        text=forecast_df['Casos Previsto'],
+        textposition='auto'
+    ))
+
+    fig.update_layout(
+        xaxis_title='Semana Epidemiológica',
+        yaxis_title='Número de Casos',
+        xaxis=dict(tickmode='linear', tickvals=list(range(1, 53)), ticktext=ticktext_labels),
+        yaxis_tickprefix='Casos: ',
+        showlegend=False,
+        height=450,  # Altura ajustada pela metade
+        width=1000,
+        margin=dict(l=40, r=40, t=40, b=40)
+    )
+
+    # Exibir o gráfico no Streamlit
+    st.plotly_chart(fig)
+
+# Chame a função display_previsao() quando a aba correspondente for selecionada.
+display_previsao()
