@@ -3,9 +3,9 @@ import pandas as pd
 import numpy as np
 import requests
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split
 import plotly.graph_objects as go
+import json
 
 # Função para buscar dados da API
 def fetch_epidemiological_data(geocode, disease):
@@ -17,9 +17,25 @@ def fetch_epidemiological_data(geocode, disease):
         st.error("Erro ao buscar dados da API.")
         return None
 
+# Função para carregar municípios e códigos do IBGE
+def load_municipalities():
+    with open('allmun.json', 'r') as f:
+        data = json.load(f)
+    municipalities = {feature['properties']['_id']: feature['properties']['cod_mun'] for feature in data['features']}
+    return municipalities
+
 # Função principal para exibir o gráfico
 def display_previsao():
-    geocode = "3550308"  # Código do município
+    # Carregar municípios e códigos do IBGE
+    municipalities = load_municipalities()
+
+    # Adicionando um filtro na página para selecionar o código do IBGE
+    selected_city = st.selectbox(
+        "Selecione o município para previsão de casos de Dengue em 2025:",
+        list(municipalities.keys()),
+        index=list(municipalities.keys()).index("São Paulo - SP")  # Pre-select São Paulo
+    )
+    geocode = municipalities[selected_city]
 
     # Coletando dados históricos (2014-2024) para Dengue
     data = fetch_epidemiological_data(geocode, "dengue")
@@ -50,32 +66,9 @@ def display_previsao():
     # Dividir os dados em conjuntos de treinamento e teste
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Sidebar para seleção de modelo e estratégia (sem filtro de ano)
-    st.sidebar.title("Configurações do Modelo")
-    
-    model_option = st.sidebar.selectbox(
-        "Escolha o modelo:",
-        ("Random Forest", "Regressão Linear")
-    )
-    
-    cross_val_option = st.sidebar.checkbox("Usar Validação Cruzada")
-
-    # Treinar o modelo com base na seleção do usuário
-    if model_option == "Random Forest":
-        model = RandomForestRegressor(n_estimators=100, random_state=42)
-        model.fit(X_train, y_train)
-        
-        if cross_val_option:
-            scores = cross_val_score(model, X, y, cv=5)
-            st.write(f"Scores da validação cruzada: {scores}")
-
-    elif model_option == "Regressão Linear":
-        model = LinearRegression()
-        model.fit(X_train, y_train)
-        
-        if cross_val_option:
-            scores = cross_val_score(model, X, y, cv=5)
-            st.write(f"Scores da validação cruzada: {scores}")
+    # Treinar o modelo Random Forest sem validação cruzada
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
 
     # Prever casos para 2025 (52 semanas)
     future_weeks = np.arange(1, 53).reshape(-1, 1)  # Semanas de 1 a 52 para 2025
@@ -104,18 +97,6 @@ def display_previsao():
         'Casos Previsto': predicted_cases
     })
 
-    # Definindo os nomes dos meses correspondentes às semanas (considerando que as semanas são de 1 a 52)
-    month_labels = [
-        "Jan", "Jan", "Jan", "Jan", "Fev", "Fev", "Fev", "Fev",
-        "Mar", "Mar", "Mar", "Mar", "Abr", "Abr", "Abr", "Abr",
-        "Mai", "Mai", "Mai", "Mai", "Jun", "Jun", "Jun", "Jun",
-        "Jul", "Jul", "Jul", "Jul", "Ago", "Ago", "Ago", "Ago",
-        "Set", "Set", "Set", "Set", "Out", "Out", "Out", "Out",
-        "Nov", "Nov", "Nov", "Nov", "Dez", "Dez", "Dez", "Dez"
-    ]
-
-    ticktext_labels = [f"{week}<br>{month}" for week, month in zip(range(1, 53), month_labels)]
-
     fig = go.Figure()
 
     fig.add_trace(go.Bar(
@@ -130,10 +111,10 @@ def display_previsao():
     fig.update_layout(
         xaxis_title='Semana Epidemiológica',
         yaxis_title='Número de Casos',
-        xaxis=dict(tickmode='linear', tickvals=list(range(1, 53)), ticktext=ticktext_labels),
+        xaxis=dict(tickmode='linear', tickvals=list(range(1, 53))),
         yaxis_tickprefix='Casos: ',
         showlegend=False,
-        height=450,  # Altura ajustada pela metade
+        height=450,
         width=1000,
         margin=dict(l=40, r=40, t=40, b=40)
     )
