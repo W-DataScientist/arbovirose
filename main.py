@@ -34,7 +34,6 @@ with tab1:
     display_map()  # Chama a função que exibe o mapa
 
 with tab2:
-    st.markdown("<h1 style='font-size: 30px;'>Previsão de Casos</h1>", unsafe_allow_html=True)
     display_previsao()
 
 with tab3:
@@ -48,6 +47,17 @@ st.sidebar.markdown(
     "<img src='https://banner2.cleanpng.com/20180920/aey/kisspng-scalable-vector-graphics-github-computer-icons-log-github-brand-octacat-social-svg-png-icon-free-down-5ba35d7db54fe5.6273953815374329577427.jpg' width='25' style='margin-right: 8px;'>"
     "</a>"
     "<a href='https://github.com/W-DataScientist/arbovirose'>Arbovirose</a>"
+    "</div>",
+    unsafe_allow_html=True
+)
+
+# Adicionando link da Info Dengue no sidebar
+st.sidebar.markdown(
+    "<div style='display: flex; align-items: center; margin-top: 10px;'>"
+    "<a href='https://info.dengue.mat.br/' target='_blank'>"
+    "<img src='https://info.dengue.mat.br/static/img/info-dengue-logo-multicidades.png' width='25' style='margin-right: 8px;'>"
+    "</a>"
+    "<a href='https://info.dengue.mat.br/'>Info Dengue</a>"
     "</div>",
     unsafe_allow_html=True
 )
