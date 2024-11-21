@@ -2,6 +2,7 @@
 Trabalho de Imersão Profissional: Aplicação de Métodos de Aprendizagem de Máquina
 
 Previsão de Casos de Arboviroses
+
 A escolha do projeto de Previsão de Casos de Arboviroses é fundamentada na relevância crescente desse tema para a saúde pública. Doenças como dengue, zika e chikungunya afetam milhões de pessoas anualmente, representando um desafio significativo, especialmente em regiões onde o aumento das temperaturas e chuvas intensas favorece a proliferação do mosquito Aedes aegypti. A previsão de surtos é, portanto, essencial para antecipar respostas rápidas e eficazes, reduzindo a letalidade e o impacto sobre os sistemas de saúde.
 
 Além disso, o projeto desempenha um papel importante na conscientização da população sobre medidas preventivas, promovendo o engajamento comunitário e a educação em saúde. A integração entre diferentes setores também fortalece a coordenação no combate às arboviroses, possibilitando uma gestão mais eficiente de recursos financeiros e humanos. Essas ações, direcionadas às áreas mais vulneráveis, são fundamentais para proteger a saúde da população e melhorar a qualidade de vida nas comunidades afetadas.
