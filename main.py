@@ -7,9 +7,9 @@ try:
 except locale.Error:
     locale.setlocale(locale.LC_TIME, 'C')  # Usa uma localidade padrão se falhar
 
-from dados import display_map
-from doc import display_doc
-from previsao import display_previsao
+from dados import display_map  # Supondo que você tenha um módulo chamado dados
+from doc import display_doc     # Supondo que você tenha um módulo chamado doc
+from previsao import display_forecast  # Importa a função do arquivo previsao.py
 
 # Configuração da página para layout amplo
 st.set_page_config(layout='wide')
@@ -34,7 +34,8 @@ with tab1:
     display_map()  # Chama a função que exibe o mapa
 
 with tab2:
-    display_previsao()
+    # Chama a função que exibe a previsão apenas quando a aba é acessada
+    display_forecast()  
 
 with tab3:
     st.markdown("<h1 style='font-size: 30px;'>Documentação</h1>", unsafe_allow_html=True)
